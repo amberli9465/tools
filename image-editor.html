@@ -3,403 +3,736 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>圖片調整工具</title>
+<title>圖片調整工具 Pro</title>
 <style>
   :root {
-    --bg: #f5f0ea; --card: #ffffff; --text: #2c2416; --sub: #7a6f60;
-    --accent: #c45d3e; --accent-light: #fdf0ec; --green: #4a8c6f;
-    --green-light: #edf7f1; --border: #e8e2d9; --radius: 12px;
+    --bg:#f5f0ea;--card:#fff;--text:#2c2416;--sub:#7a6f60;
+    --accent:#c45d3e;--accent-light:#fdf0ec;--green:#4a8c6f;
+    --green-light:#edf7f1;--border:#e8e2d9;--yellow:#c49a3e;
+    --yellow-light:#fdf6e8;--radius:12px;
   }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body {
-    font-family: -apple-system, 'Helvetica Neue', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-    background:var(--bg); color:var(--text); min-height:100vh; padding-bottom:40px;
-  }
-  .header {
-    background:linear-gradient(135deg,#2c2416,#4a3828);
-    color:#faf8f5; padding:24px 16px 20px; text-align:center;
-  }
-  .header h1 { font-size:20px; font-weight:700; }
-  .header p { font-size:11px; opacity:0.6; margin-top:4px; }
-  .container { max-width:520px; margin:0 auto; padding:16px; }
-  .upload-area {
-    background:var(--card); border:2px dashed var(--border); border-radius:var(--radius);
-    padding:36px 16px; text-align:center; position:relative; cursor:pointer; margin-bottom:16px;
-  }
-  .upload-area .icon { font-size:36px; margin-bottom:8px; }
-  .upload-area h2 { font-size:15px; font-weight:600; }
-  .upload-area p { font-size:11px; color:var(--sub); margin-top:4px; }
-  .upload-area input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
-  .img-info {
-    display:none; background:var(--card); border-radius:var(--radius); padding:12px 16px;
-    margin-bottom:12px; box-shadow:0 2px 12px rgba(44,36,22,0.06); font-size:12px; color:var(--sub); text-align:center;
-  }
-  .img-info.active { display:block; }
-  .img-info span { font-weight:600; color:var(--text); }
-  .canvas-wrap {
-    display:none; background:#e0dbd4; border-radius:var(--radius); overflow:hidden;
-    margin-bottom:16px; position:relative; touch-action:none;
-  }
-  .canvas-wrap.active { display:block; }
-  .canvas-wrap canvas { display:block; width:100%; height:auto; }
-  .crop-overlay { position:absolute; top:0; left:0; width:100%; height:100%; display:none; cursor:crosshair; }
-  .crop-overlay.active { display:block; }
-  .crop-box { position:absolute; border:2px solid var(--accent); background:rgba(196,93,62,0.1); pointer-events:none; }
-  .crop-dim { position:absolute; background:rgba(0,0,0,0.5); pointer-events:none; }
-  .section {
-    display:none; background:var(--card); border-radius:var(--radius);
-    margin-bottom:12px; box-shadow:0 2px 12px rgba(44,36,22,0.06); overflow:hidden;
-  }
-  .section.active { display:block; }
-  .section-title { padding:14px 16px; font-size:14px; font-weight:600; border-bottom:1px solid var(--border); }
-  .section-body { padding:14px 16px; }
-  .tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
-  .tab {
-    padding:6px 14px; border-radius:20px; border:1.5px solid var(--border); background:var(--card);
-    font-size:12px; font-family:inherit; cursor:pointer; color:var(--sub);
-  }
-  .tab.active { background:var(--accent); color:white; border-color:var(--accent); }
-  .range-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-  .range-row label { font-size:12px; color:var(--sub); width:60px; flex-shrink:0; }
-  .range-row input[type="range"] { flex:1; accent-color:var(--accent); }
-  .range-row .val { font-size:13px; font-weight:600; width:48px; text-align:right; flex-shrink:0; }
-  .dim-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-  .dim-input {
-    flex:1; padding:8px 10px; border:1.5px solid var(--border); border-radius:8px;
-    font-size:13px; font-family:inherit; text-align:center; color:var(--text); background:var(--bg);
-  }
-  .dim-input:focus { outline:none; border-color:var(--accent); }
-  .dim-x { font-size:14px; color:var(--sub); }
-  .btn {
-    display:inline-flex; align-items:center; justify-content:center; gap:6px;
-    padding:10px 20px; border-radius:8px; border:none; font-size:13px; font-weight:600;
-    font-family:inherit; cursor:pointer; width:100%; margin-bottom:8px;
-  }
-  .btn-primary { background:var(--accent); color:white; }
-  .btn-green { background:var(--green); color:white; }
-  .btn-outline { background:var(--card); color:var(--text); border:1.5px solid var(--border); }
-  .btn-row { display:flex; gap:8px; }
-  .btn-row .btn { flex:1; }
-  .format-grid { display:flex; gap:8px; margin-bottom:12px; }
-  .format-opt {
-    flex:1; padding:12px 8px; border-radius:10px; border:2px solid var(--border);
-    background:var(--card); text-align:center; cursor:pointer;
-  }
-  .format-opt.active { border-color:var(--accent); background:var(--accent-light); }
-  .format-opt .fi { font-size:22px; margin-bottom:4px; }
-  .format-opt .fn { font-size:12px; font-weight:600; }
-  .format-opt .fd { font-size:10px; color:var(--sub); }
-  .result-info {
-    background:var(--green-light); border-radius:8px; padding:10px 14px;
-    font-size:12px; color:var(--green); margin-bottom:12px; text-align:center;
-  }
-  .rotate-row { display:flex; gap:8px; margin-bottom:12px; }
-  .rotate-btn {
-    flex:1; padding:10px; border-radius:8px; border:1.5px solid var(--border);
-    background:var(--card); font-size:20px; cursor:pointer; text-align:center;
-  }
-  .notice { font-size:11px; color:var(--sub); text-align:center; margin-top:8px; line-height:1.6; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,'Helvetica Neue','PingFang TC','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .header{background:linear-gradient(135deg,#2c2416,#4a3828);color:#faf8f5;padding:22px 16px 18px;text-align:center}
+  .header h1{font-size:20px;font-weight:700}
+  .header p{font-size:11px;opacity:.6;margin-top:3px}
+  .container{max-width:860px;margin:0 auto;padding:14px 14px 60px}
+
+  /* Mode tabs */
+  .mode-tabs{display:flex;gap:6px;margin-bottom:14px}
+  .mode-tab{flex:1;padding:11px;border-radius:var(--radius);border:2px solid var(--border);background:var(--card);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:center;color:var(--sub)}
+  .mode-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  .upload-area{background:var(--card);border:2px dashed var(--border);border-radius:var(--radius);padding:32px 16px;text-align:center;position:relative;cursor:pointer;margin-bottom:14px}
+  .upload-area .icon{font-size:36px;margin-bottom:6px}
+  .upload-area h2{font-size:15px;font-weight:600}
+  .upload-area p{font-size:11px;color:var(--sub);margin-top:3px}
+  .upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+  .info-bar{display:none;background:var(--card);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(44,36,22,.05);font-size:12px;color:var(--sub);text-align:center}
+  .info-bar.active{display:block}
+  .info-bar span{font-weight:600;color:var(--text)}
+
+  .canvas-wrap{display:none;background:#e0dbd4;border-radius:var(--radius);overflow:hidden;margin-bottom:14px;position:relative;touch-action:none}
+  .canvas-wrap.active{display:block}
+  .canvas-wrap canvas{display:block;width:100%;height:auto}
+  .crop-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:none;cursor:crosshair}
+  .crop-overlay.active{display:block}
+  .crop-box{position:absolute;border:2px solid var(--accent);background:rgba(196,93,62,.1);pointer-events:none}
+  .crop-dim{position:absolute;background:rgba(0,0,0,.5);pointer-events:none}
+
+  .sec{display:none;background:var(--card);border-radius:var(--radius);margin-bottom:10px;box-shadow:0 2px 8px rgba(44,36,22,.05);overflow:hidden}
+  .sec.active{display:block}
+  .sec-t{padding:12px 14px;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+  .sec-t .toggle{font-size:11px;color:var(--sub)}
+  .sec-b{padding:12px 14px}
+  .sec-b.collapsed{display:none}
+
+  .tabs{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+  .tab{padding:5px 12px;border-radius:18px;border:1.5px solid var(--border);background:var(--card);font-size:11px;font-family:inherit;cursor:pointer;color:var(--sub)}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  .rr{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .rr label{font-size:11px;color:var(--sub);width:50px;flex-shrink:0}
+  .rr input[type=range]{flex:1;accent-color:var(--accent)}
+  .rr .val{font-size:12px;font-weight:600;width:44px;text-align:right;flex-shrink:0}
+
+  .dr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .di{flex:1;padding:7px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;text-align:center;color:var(--text);background:var(--bg)}
+  .di:focus{outline:none;border-color:var(--accent)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:9px 16px;border-radius:8px;border:none;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;width:100%;margin-bottom:6px}
+  .btn-p{background:var(--accent);color:#fff}
+  .btn-g{background:var(--green);color:#fff}
+  .btn-o{background:var(--card);color:var(--text);border:1.5px solid var(--border)}
+  .btn-y{background:var(--yellow);color:#fff}
+  .br{display:flex;gap:6px}
+  .br .btn{flex:1}
+
+  .fg{display:flex;gap:6px;margin-bottom:10px}
+  .fo{flex:1;padding:10px 6px;border-radius:10px;border:2px solid var(--border);background:var(--card);text-align:center;cursor:pointer}
+  .fo.active{border-color:var(--accent);background:var(--accent-light)}
+  .fo .fi{font-size:20px;margin-bottom:3px}
+  .fo .fn{font-size:11px;font-weight:600}
+  .fo .fd{font-size:9px;color:var(--sub)}
+
+  .ri{background:var(--green-light);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--green);margin-bottom:10px;text-align:center}
+
+  .rot-r{display:flex;gap:6px;margin-bottom:10px}
+  .rot-b{flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);font-size:18px;cursor:pointer;text-align:center}
+
+  /* Watermark */
+  .wm-row{margin-bottom:8px}
+  .wm-row label{display:block;font-size:11px;color:var(--sub);margin-bottom:4px}
+  .wm-input{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg)}
+  .wm-input:focus{outline:none;border-color:var(--accent)}
+  .wm-opts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .wm-opt{padding:5px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--card);font-size:11px;font-family:inherit;cursor:pointer;color:var(--sub)}
+  .wm-opt.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* Batch */
+  .batch-list{margin-bottom:10px}
+  .batch-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:4px;font-size:11px}
+  .batch-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .batch-item .size{color:var(--sub);flex-shrink:0}
+  .batch-status{font-size:11px;color:var(--green);text-align:center;margin-bottom:8px}
+  .batch-progress{height:6px;background:var(--border);border-radius:3px;margin-bottom:8px;overflow:hidden}
+  .batch-progress-fill{height:100%;background:var(--accent);border-radius:3px;width:0;transition:width .3s}
+
+  .notice{font-size:10px;color:var(--sub);text-align:center;margin-top:6px;line-height:1.5}
+  .hidden{display:none!important}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>🖼️ 圖片調整工具</h1>
-  <p>裁切 · 縮放 · 旋轉 · 轉檔 — 全部在瀏覽器完成</p>
+  <h1>🖼️ 圖片調整工具 Pro</h1>
+  <p>裁切 · 調色 · 浮水印 · 批次處理 — 全部離線完成</p>
 </div>
 <div class="container">
-  <div class="upload-area" id="uploadArea">
-    <div class="icon">📷</div>
-    <h2>點擊選擇圖片</h2>
-    <p>支援 JPG、PNG、WebP、BMP、GIF</p>
-    <input type="file" id="fileInput" accept="image/*">
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="modeEdit">✏️ 單張編輯</button>
+    <button class="mode-tab" id="modeBatch">📦 批次處理</button>
   </div>
-  <div class="img-info" id="imgInfo"></div>
-  <div class="canvas-wrap" id="canvasWrap">
-    <canvas id="mainCanvas"></canvas>
-    <div class="crop-overlay" id="cropOverlay"></div>
-  </div>
-  <div class="section" id="cropSection">
-    <div class="section-title">✂️ 裁切</div>
-    <div class="section-body">
-      <div class="tabs" id="ratioTabs">
-        <button class="tab active" data-r="free">自由</button>
-        <button class="tab" data-r="1:1">1:1</button>
-        <button class="tab" data-r="4:3">4:3</button>
-        <button class="tab" data-r="3:2">3:2</button>
-        <button class="tab" data-r="16:9">16:9</button>
-        <button class="tab" data-r="9:16">9:16</button>
-        <button class="tab" data-r="2:3">2:3</button>
-        <button class="tab" data-r="3:4">3:4</button>
+
+  <!-- ===== SINGLE EDIT MODE ===== -->
+  <div id="editPanel">
+    <div class="upload-area" id="uploadArea">
+      <div class="icon">📷</div>
+      <h2>點擊選擇圖片</h2>
+      <p>支援 JPG、PNG、WebP、BMP、GIF</p>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+    <div class="info-bar" id="imgInfo"></div>
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="cv"></canvas>
+      <div class="crop-overlay" id="cropOv"></div>
+    </div>
+
+    <!-- Crop -->
+    <div class="sec" id="sCrop">
+      <div class="sec-t" data-sec="sCropB">✂️ 裁切 <span class="toggle">▼</span></div>
+      <div class="sec-b" id="sCropB">
+        <div class="tabs" id="ratioTabs">
+          <button class="tab active" data-r="free">自由</button>
+          <button class="tab" data-r="1:1">1:1</button>
+          <button class="tab" data-r="4:3">4:3</button>
+          <button class="tab" data-r="3:2">3:2</button>
+          <button class="tab" data-r="16:9">16:9</button>
+          <button class="tab" data-r="9:16">9:16</button>
+          <button class="tab" data-r="2:3">2:3</button>
+          <button class="tab" data-r="3:4">3:4</button>
+        </div>
+        <p class="notice" id="cropHint">在圖片上拖曳選取裁切區域</p>
+        <div class="dr hidden" id="cropDims">
+          <input class="di" id="cropW" readonly>
+          <span style="font-size:13px;color:var(--sub)">×</span>
+          <input class="di" id="cropH" readonly>
+          <span style="font-size:10px;color:var(--sub)">px</span>
+        </div>
+        <div class="br">
+          <button class="btn btn-p" id="btnCrop">✂️ 確認裁切</button>
+          <button class="btn btn-o" id="btnRCrop">↩ 重設</button>
+        </div>
       </div>
-      <p class="notice" id="cropHint">在圖片上拖曳選取要保留的區域</p>
-      <div class="dim-row" id="cropDims" style="display:none">
-        <input class="dim-input" id="cropW" readonly>
-        <span class="dim-x">×</span>
-        <input class="dim-input" id="cropH" readonly>
-        <span style="font-size:11px;color:var(--sub)">px</span>
+    </div>
+
+    <!-- Adjust -->
+    <div class="sec" id="sAdj">
+      <div class="sec-t" data-sec="sAdjB">🎨 亮度 / 對比 / 飽和度 <span class="toggle">▼</span></div>
+      <div class="sec-b" id="sAdjB">
+        <div class="rr">
+          <label>亮度</label>
+          <input type="range" id="rBright" min="-100" max="100" value="0">
+          <span class="val" id="vBright">0</span>
+        </div>
+        <div class="rr">
+          <label>對比</label>
+          <input type="range" id="rContrast" min="-100" max="100" value="0">
+          <span class="val" id="vContrast">0</span>
+        </div>
+        <div class="rr">
+          <label>飽和度</label>
+          <input type="range" id="rSat" min="-100" max="100" value="0">
+          <span class="val" id="vSat">0</span>
+        </div>
+        <div class="br">
+          <button class="btn btn-p" id="btnAdj">🎨 套用調整</button>
+          <button class="btn btn-o" id="btnRAdjPrev">👁 預覽</button>
+        </div>
+        <p class="notice">套用後無法還原，建議先預覽確認</p>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btnCrop">✂️ 確認裁切</button>
-        <button class="btn btn-outline" id="btnResetCrop">↩ 重設</button>
+    </div>
+
+    <!-- Resize -->
+    <div class="sec" id="sResize">
+      <div class="sec-t" data-sec="sResizeB">📐 縮放 <span class="toggle">▼</span></div>
+      <div class="sec-b" id="sResizeB">
+        <div class="rr">
+          <label>比例</label>
+          <input type="range" id="rResize" min="10" max="100" value="100">
+          <span class="val" id="vResize">100%</span>
+        </div>
+        <div class="dr">
+          <input class="di" id="resW" inputmode="numeric">
+          <span style="font-size:13px;color:var(--sub)">×</span>
+          <input class="di" id="resH" inputmode="numeric">
+          <span style="font-size:10px;color:var(--sub)">px</span>
+        </div>
+        <button class="btn btn-p" id="btnResize">📐 套用縮放</button>
+      </div>
+    </div>
+
+    <!-- Rotate -->
+    <div class="sec" id="sRot">
+      <div class="sec-t" data-sec="sRotB">🔄 旋轉 / 翻轉 <span class="toggle">▼</span></div>
+      <div class="sec-b" id="sRotB">
+        <div class="rot-r">
+          <button class="rot-b" id="rotL">↺</button>
+          <button class="rot-b" id="rotR">↻</button>
+          <button class="rot-b" id="fH">⇔</button>
+          <button class="rot-b" id="fV">⇕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Watermark -->
+    <div class="sec" id="sWm">
+      <div class="sec-t" data-sec="sWmB">💬 文字浮水印 <span class="toggle">▼</span></div>
+      <div class="sec-b" id="sWmB">
+        <div class="wm-row">
+          <label>文字內容</label>
+          <input class="wm-input" id="wmText" placeholder="輸入浮水印文字" value="">
+        </div>
+        <div class="wm-row">
+          <label>位置</label>
+          <div class="wm-opts" id="wmPos">
+            <button class="wm-opt" data-p="tl">左上</button>
+            <button class="wm-opt" data-p="tr">右上</button>
+            <button class="wm-opt active" data-p="br">右下</button>
+            <button class="wm-opt" data-p="bl">左下</button>
+            <button class="wm-opt" data-p="ct">置中</button>
+          </div>
+        </div>
+        <div class="rr">
+          <label>大小</label>
+          <input type="range" id="rWmSize" min="12" max="120" value="36">
+          <span class="val" id="vWmSize">36px</span>
+        </div>
+        <div class="rr">
+          <label>透明度</label>
+          <input type="range" id="rWmAlpha" min="10" max="100" value="50">
+          <span class="val" id="vWmAlpha">50%</span>
+        </div>
+        <div class="dr">
+          <label style="font-size:11px;color:var(--sub);width:50px;flex-shrink:0">顏色</label>
+          <input type="color" id="wmColor" value="#ffffff" style="flex:1;height:32px;border:none;cursor:pointer">
+        </div>
+        <button class="btn btn-y" id="btnWm">💬 加上浮水印</button>
+      </div>
+    </div>
+
+    <!-- Format / Download -->
+    <div class="sec" id="sFmt">
+      <div class="sec-t" data-sec="sFmtB">💾 轉檔 / 下載 <span class="toggle">▼</span></div>
+      <div class="sec-b" id="sFmtB">
+        <div class="fg" id="fmtGrid">
+          <div class="fo active" data-f="jpeg"><div class="fi">🟧</div><div class="fn">JPG</div><div class="fd">照片通用</div></div>
+          <div class="fo" data-f="png"><div class="fi">🟦</div><div class="fn">PNG</div><div class="fd">透明背景</div></div>
+          <div class="fo" data-f="webp"><div class="fi">🟩</div><div class="fn">WebP</div><div class="fd">檔案最小</div></div>
+        </div>
+        <div class="rr" id="qRow">
+          <label>品質</label>
+          <input type="range" id="rQual" min="10" max="100" value="90">
+          <span class="val" id="vQual">90%</span>
+        </div>
+        <div class="ri hidden" id="resInfo"></div>
+        <div class="wm-row">
+          <label>檔案名稱</label>
+          <input class="wm-input" id="dlName" placeholder="自訂檔名（不需要打副檔名）" value="">
+        </div>
+        <button class="btn btn-g" id="btnDL">⬇️ 下載圖片</button>
+      </div>
+    </div>
+
+    <!-- Undo / Reset -->
+    <div class="sec" id="sReset">
+      <div class="sec-b">
+        <div class="br">
+          <button class="btn btn-o" id="btnUndo">↩ 復原上一步</button>
+          <button class="btn btn-o" id="btnReset">🔄 重新選擇</button>
+        </div>
       </div>
     </div>
   </div>
-  <div class="section" id="resizeSection">
-    <div class="section-title">📐 縮放</div>
-    <div class="section-body">
-      <div class="range-row">
-        <label>比例</label>
-        <input type="range" id="resizeRange" min="10" max="100" value="100">
-        <span class="val" id="resizeVal">100%</span>
+
+  <!-- ===== BATCH MODE ===== -->
+  <div id="batchPanel" class="hidden">
+    <div class="upload-area" id="bUploadArea">
+      <div class="icon">📂</div>
+      <h2>點擊選擇多張圖片</h2>
+      <p>一次處理多張圖片的縮放與轉檔</p>
+      <input type="file" id="bFileInput" accept="image/*" multiple>
+    </div>
+    <div class="batch-list" id="bList"></div>
+
+    <div class="sec hidden" id="bSettings">
+      <div class="sec-t">⚙️ 批次設定</div>
+      <div class="sec-b">
+        <div class="rr">
+          <label>縮放</label>
+          <input type="range" id="bResize" min="10" max="100" value="100">
+          <span class="val" id="bResizeVal">100%</span>
+        </div>
+        <div class="fg" id="bFmtGrid">
+          <div class="fo active" data-bf="jpeg"><div class="fi">🟧</div><div class="fn">JPG</div></div>
+          <div class="fo" data-bf="png"><div class="fi">🟦</div><div class="fn">PNG</div></div>
+          <div class="fo" data-bf="webp"><div class="fi">🟩</div><div class="fn">WebP</div></div>
+          <div class="fo" data-bf="original"><div class="fi">📄</div><div class="fn">原格式</div></div>
+        </div>
+        <div class="rr" id="bQRow">
+          <label>品質</label>
+          <input type="range" id="bQual" min="10" max="100" value="85">
+          <span class="val" id="bQualVal">85%</span>
+        </div>
+
+        <div class="wm-row">
+          <label>浮水印文字（留空不加）</label>
+          <input class="wm-input" id="bWmText" placeholder="例：© 姊姊 2026">
+        </div>
+
+        <div class="batch-progress hidden" id="bProgress"><div class="batch-progress-fill" id="bProgressFill"></div></div>
+        <div class="batch-status hidden" id="bStatus"></div>
+
+        <button class="btn btn-g" id="btnBatch">⬇️ 開始處理並下載</button>
+        <p class="notice">每張圖片會自動下載，請允許瀏覽器多檔下載</p>
       </div>
-      <div class="dim-row">
-        <input class="dim-input" id="resizeW" inputmode="numeric">
-        <span class="dim-x">×</span>
-        <input class="dim-input" id="resizeH" inputmode="numeric">
-        <span style="font-size:11px;color:var(--sub)">px</span>
+    </div>
+
+    <div class="sec hidden" id="bResetSec">
+      <div class="sec-b" style="text-align:center">
+        <button class="btn btn-o" id="btnBReset">🔄 重新選擇</button>
       </div>
-      <button class="btn btn-primary" id="btnResize">📐 套用縮放</button>
     </div>
   </div>
-  <div class="section" id="rotateSection">
-    <div class="section-title">🔄 旋轉 / 翻轉</div>
-    <div class="section-body">
-      <div class="rotate-row">
-        <button class="rotate-btn" id="rotL">↺</button>
-        <button class="rotate-btn" id="rotR">↻</button>
-        <button class="rotate-btn" id="flipH">⇔</button>
-        <button class="rotate-btn" id="flipV">⇕</button>
-      </div>
-    </div>
-  </div>
-  <div class="section" id="formatSection">
-    <div class="section-title">💾 轉檔 / 下載</div>
-    <div class="section-body">
-      <div class="format-grid" id="formatGrid">
-        <div class="format-opt active" data-f="jpeg"><div class="fi">🟧</div><div class="fn">JPG</div><div class="fd">照片通用</div></div>
-        <div class="format-opt" data-f="png"><div class="fi">🟦</div><div class="fn">PNG</div><div class="fd">透明背景</div></div>
-        <div class="format-opt" data-f="webp"><div class="fi">🟩</div><div class="fn">WebP</div><div class="fd">檔案最小</div></div>
-      </div>
-      <div class="range-row" id="qualityRow">
-        <label>品質</label>
-        <input type="range" id="qualityRange" min="10" max="100" value="90">
-        <span class="val" id="qualityVal">90%</span>
-      </div>
-      <div class="result-info" id="resultInfo" style="display:none"></div>
-      <button class="btn btn-green" id="btnDL">⬇️ 下載圖片</button>
-    </div>
-  </div>
-  <div class="section" id="resetSection">
-    <div class="section-body" style="text-align:center">
-      <button class="btn btn-outline" id="btnReset">🔄 重新選擇圖片</button>
-    </div>
-  </div>
+
 </div>
 
 <script>
-var cv = document.getElementById('mainCanvas');
-var cx = cv.getContext('2d');
-var ov = document.getElementById('cropOverlay');
-var W = 0, H = 0, fmt = 'jpeg', qual = 0.9, ratio = 'free';
-var dragging = false, sx = 0, sy = 0, ex = 0, ey = 0, box = null;
+/* ── Single Edit ── */
+var cv=document.getElementById('cv'),cx=cv.getContext('2d'),ov=document.getElementById('cropOv');
+var W=0,H=0,fmt='jpeg',qual=.9,ratio='free';
+var drag=false,sx=0,sy=0,ex2=0,ey2=0,box=null;
+var undoStack=[];
+var MAX_HIST=10;
 
-document.getElementById('fileInput').addEventListener('change', function(e) {
-  var f = e.target.files[0]; if (!f) return;
-  var r = new FileReader();
-  r.onload = function(ev) {
-    var img = new Image();
-    img.onload = function() {
-      W = img.width; H = img.height;
-      cv.width = W; cv.height = H;
-      cx.drawImage(img, 0, 0);
-      document.getElementById('uploadArea').style.display = 'none';
-      ['canvasWrap','cropSection','resizeSection','rotateSection','formatSection','resetSection','imgInfo'].forEach(function(id) {
-        document.getElementById(id).classList.add('active');
-      });
+function pushHist(){
+  if(W<1||H<1)return;
+  var d=cv.toDataURL('image/png');
+  undoStack.push(d);
+  if(undoStack.length>MAX_HIST)undoStack.shift();
+}
+
+/* File */
+document.getElementById('fileInput').addEventListener('change',function(e){
+  var f=e.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      undoStack=[];
+      W=img.width;H=img.height;
+      cv.width=W;cv.height=H;cx.drawImage(img,0,0);
+      pushHist();
+      document.getElementById('uploadArea').style.display='none';
+      ['canvasWrap','sCrop','sAdj','sResize','sRot','sWm','sFmt','sReset','imgInfo'].forEach(function(id){document.getElementById(id).classList.add('active')});
       ov.classList.add('active');
-      var sz = f.size < 1048576 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1048576).toFixed(1)+' MB';
-      document.getElementById('imgInfo').innerHTML = '📄 <span>'+f.name+'</span> — <span>'+W+' × '+H+'</span> px — <span>'+sz+'</span>';
-      updResize();
-      resetCrop();
-    };
-    img.src = ev.target.result;
-  };
-  r.readAsDataURL(f);
+      var sz=f.size<1048576?(f.size/1024).toFixed(1)+' KB':(f.size/1048576).toFixed(1)+' MB';
+      document.getElementById('imgInfo').innerHTML='📄 <span>'+f.name+'</span> — <span>'+W+' × '+H+'</span> px — <span>'+sz+'</span>';
+      updResize();resetCrop();resetAdj();
+      document.getElementById('dlName').value=f.name.replace(/\.[^.]+$/,'');
+    };img.src=ev.target.result;
+  };r.readAsDataURL(f);
 });
 
-// Ratio tabs
-document.getElementById('ratioTabs').addEventListener('click', function(e) {
-  var b = e.target; if (!b.getAttribute('data-r')) return;
-  ratio = b.getAttribute('data-r');
-  var ts = this.querySelectorAll('.tab');
-  for (var i=0;i<ts.length;i++) ts[i].classList.remove('active');
-  b.classList.add('active');
-  resetCrop();
+/* Section toggle */
+document.querySelectorAll('.sec-t[data-sec]').forEach(function(t){
+  t.addEventListener('click',function(){
+    var b=document.getElementById(this.getAttribute('data-sec'));
+    var tgl=this.querySelector('.toggle');
+    if(b.classList.contains('collapsed')){b.classList.remove('collapsed');tgl.textContent='▼';}
+    else{b.classList.add('collapsed');tgl.textContent='▶';}
+  });
 });
 
-// Crop
-function resetCrop() { box=null; ov.innerHTML=''; document.getElementById('cropDims').style.display='none'; document.getElementById('cropHint').style.display='block'; }
+/* Ratio */
+document.getElementById('ratioTabs').addEventListener('click',function(e){
+  var b=e.target;if(!b.getAttribute('data-r'))return;
+  ratio=b.getAttribute('data-r');
+  var ts=this.querySelectorAll('.tab');for(var i=0;i<ts.length;i++)ts[i].classList.remove('active');
+  b.classList.add('active');resetCrop();
+});
 
-function coords(e) {
-  var r = ov.getBoundingClientRect();
-  var t = e.touches ? e.touches[0] : e;
-  return { x: Math.max(0,Math.min(W,(t.clientX-r.left)*W/r.width)), y: Math.max(0,Math.min(H,(t.clientY-r.top)*H/r.height)) };
-}
+/* Crop */
+function resetCrop(){box=null;ov.innerHTML='';document.getElementById('cropDims').classList.add('hidden');document.getElementById('cropHint').style.display='block';}
+function cCoords(e){var r=ov.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:Math.max(0,Math.min(W,(t.clientX-r.left)*W/r.width)),y:Math.max(0,Math.min(H,(t.clientY-r.top)*H/r.height))};}
+ov.addEventListener('mousedown',cS);ov.addEventListener('touchstart',cS,{passive:false});
+function cS(e){e.preventDefault();drag=true;var c=cCoords(e);sx=c.x;sy=c.y;ex2=c.x;ey2=c.y;document.addEventListener('mousemove',cM);document.addEventListener('mouseup',cE);document.addEventListener('touchmove',cM,{passive:false});document.addEventListener('touchend',cE);}
+function cM(e){if(!drag)return;e.preventDefault();var c=cCoords(e);ex2=c.x;ey2=c.y;drawBox();}
+function cE(){drag=false;document.removeEventListener('mousemove',cM);document.removeEventListener('mouseup',cE);document.removeEventListener('touchmove',cM);document.removeEventListener('touchend',cE);}
 
-ov.addEventListener('mousedown', cStart);
-ov.addEventListener('touchstart', cStart, {passive:false});
-
-function cStart(e) {
-  e.preventDefault(); dragging=true;
-  var c=coords(e); sx=c.x; sy=c.y; ex=c.x; ey=c.y;
-  document.addEventListener('mousemove',cMove);
-  document.addEventListener('mouseup',cEnd);
-  document.addEventListener('touchmove',cMove,{passive:false});
-  document.addEventListener('touchend',cEnd);
-}
-function cMove(e) {
-  if(!dragging)return; e.preventDefault();
-  var c=coords(e); ex=c.x; ey=c.y; drawBox();
-}
-function cEnd() {
-  dragging=false;
-  document.removeEventListener('mousemove',cMove);
-  document.removeEventListener('mouseup',cEnd);
-  document.removeEventListener('touchmove',cMove);
-  document.removeEventListener('touchend',cEnd);
-}
-
-function drawBox() {
-  var x1=Math.min(sx,ex),y1=Math.min(sy,ey),w=Math.abs(ex-sx),h=Math.abs(ey-sy);
-  if(ratio!=='free'&&w>5&&h>5){
-    var p=ratio.split(':'),tr=parseInt(p[0])/parseInt(p[1]);
-    if(w/h>tr)w=h*tr; else h=w/tr;
-    if(x1+w>W)w=W-x1; if(y1+h>H)h=H-y1;
-  }
+function drawBox(){
+  var x1=Math.min(sx,ex2),y1=Math.min(sy,ey2),w=Math.abs(ex2-sx),h=Math.abs(ey2-sy);
+  if(ratio!=='free'&&w>5&&h>5){var p=ratio.split(':'),tr=parseInt(p[0])/parseInt(p[1]);if(w/h>tr)w=h*tr;else h=w/tr;if(x1+w>W)w=W-x1;if(y1+h>H)h=H-y1;}
   if(w<5||h<5)return;
   box={x:Math.round(x1),y:Math.round(y1),w:Math.round(w),h:Math.round(h)};
   var r=ov.getBoundingClientRect(),mx=r.width/W,my=r.height/H;
   var bx=x1*mx,by=y1*my,bw=w*mx,bh=h*my;
-  ov.innerHTML='<div class="crop-dim" style="top:0;left:0;width:100%;height:'+by+'px"></div>'+
-    '<div class="crop-dim" style="top:'+(by+bh)+'px;left:0;width:100%;bottom:0"></div>'+
-    '<div class="crop-dim" style="top:'+by+'px;left:0;width:'+bx+'px;height:'+bh+'px"></div>'+
-    '<div class="crop-dim" style="top:'+by+'px;left:'+(bx+bw)+'px;right:0;height:'+bh+'px"></div>'+
-    '<div class="crop-box" style="left:'+bx+'px;top:'+by+'px;width:'+bw+'px;height:'+bh+'px"></div>';
-  document.getElementById('cropDims').style.display='flex';
-  document.getElementById('cropW').value=box.w;
-  document.getElementById('cropH').value=box.h;
+  ov.innerHTML='<div class="crop-dim" style="top:0;left:0;width:100%;height:'+by+'px"></div><div class="crop-dim" style="top:'+(by+bh)+'px;left:0;width:100%;bottom:0"></div><div class="crop-dim" style="top:'+by+'px;left:0;width:'+bx+'px;height:'+bh+'px"></div><div class="crop-dim" style="top:'+by+'px;left:'+(bx+bw)+'px;right:0;height:'+bh+'px"></div><div class="crop-box" style="left:'+bx+'px;top:'+by+'px;width:'+bw+'px;height:'+bh+'px"></div>';
+  document.getElementById('cropDims').classList.remove('hidden');
+  document.getElementById('cropW').value=box.w;document.getElementById('cropH').value=box.h;
   document.getElementById('cropHint').style.display='none';
 }
 
 document.getElementById('btnCrop').addEventListener('click',function(){
   if(!box){alert('請先在圖片上拖曳選取裁切區域');return;}
+  pushHist();
   var t=document.createElement('canvas');t.width=box.w;t.height=box.h;
   t.getContext('2d').drawImage(cv,box.x,box.y,box.w,box.h,0,0,box.w,box.h);
-  W=box.w;H=box.h;cv.width=W;cv.height=H;cx.drawImage(t,0,0);
-  updInfo();updResize();resetCrop();
+  W=box.w;H=box.h;cv.width=W;cv.height=H;cx.drawImage(t,0,0);updInfo();updResize();resetCrop();
 });
-document.getElementById('btnResetCrop').addEventListener('click',resetCrop);
+document.getElementById('btnRCrop').addEventListener('click',resetCrop);
 
-// Resize
-function updResize(){
-  document.getElementById('resizeRange').value=100;
-  document.getElementById('resizeVal').textContent='100%';
-  document.getElementById('resizeW').value=W;
-  document.getElementById('resizeH').value=H;
+/* Adjust */
+function resetAdj(){
+  document.getElementById('rBright').value=0;document.getElementById('vBright').textContent='0';
+  document.getElementById('rContrast').value=0;document.getElementById('vContrast').textContent='0';
+  document.getElementById('rSat').value=0;document.getElementById('vSat').textContent='0';
 }
-document.getElementById('resizeRange').addEventListener('input',function(){
-  var p=parseInt(this.value);
-  document.getElementById('resizeVal').textContent=p+'%';
-  document.getElementById('resizeW').value=Math.round(W*p/100);
-  document.getElementById('resizeH').value=Math.round(H*p/100);
+['rBright','rContrast','rSat'].forEach(function(id){
+  document.getElementById(id).addEventListener('input',function(){
+    document.getElementById('v'+id.substring(1).charAt(0).toUpperCase()+id.substring(2)).textContent=this.value;
+  });
 });
-document.getElementById('resizeW').addEventListener('input',function(){
-  var n=parseInt(this.value)||W,r=n/W;
-  document.getElementById('resizeH').value=Math.round(H*r);
-  var p=Math.round(r*100);
-  document.getElementById('resizeRange').value=Math.min(100,Math.max(10,p));
-  document.getElementById('resizeVal').textContent=p+'%';
+document.getElementById('rBright').addEventListener('input',function(){document.getElementById('vBright').textContent=this.value;});
+document.getElementById('rContrast').addEventListener('input',function(){document.getElementById('vContrast').textContent=this.value;});
+document.getElementById('rSat').addEventListener('input',function(){document.getElementById('vSat').textContent=this.value;});
+
+function applyAdjust(target,tCx,tW,tH){
+  var b=parseInt(document.getElementById('rBright').value);
+  var c=parseInt(document.getElementById('rContrast').value);
+  var s=parseInt(document.getElementById('rSat').value);
+  if(b===0&&c===0&&s===0)return;
+  var imgData=tCx.getImageData(0,0,tW,tH);
+  var d=imgData.data;
+  var cf=(259*(c+255))/(255*(259-c));
+  for(var i=0;i<d.length;i+=4){
+    var r=d[i],g=d[i+1],bl=d[i+2];
+    // brightness
+    r+=b*2.55;g+=b*2.55;bl+=b*2.55;
+    // contrast
+    r=cf*(r-128)+128;g=cf*(g-128)+128;bl=cf*(bl-128)+128;
+    // saturation
+    var gray=0.2126*r+0.7152*g+0.0722*bl;
+    var sf=1+s/100;
+    r=gray+sf*(r-gray);g=gray+sf*(g-gray);bl=gray+sf*(bl-gray);
+    d[i]=Math.max(0,Math.min(255,r));
+    d[i+1]=Math.max(0,Math.min(255,g));
+    d[i+2]=Math.max(0,Math.min(255,bl));
+  }
+  tCx.putImageData(imgData,0,0);
+}
+
+document.getElementById('btnAdj').addEventListener('click',function(){
+  pushHist();applyAdjust(cv,cx,W,H);updInfo();resetAdj();
 });
-document.getElementById('resizeH').addEventListener('input',function(){
-  var n=parseInt(this.value)||H,r=n/H;
-  document.getElementById('resizeW').value=Math.round(W*r);
-  var p=Math.round(r*100);
-  document.getElementById('resizeRange').value=Math.min(100,Math.max(10,p));
-  document.getElementById('resizeVal').textContent=p+'%';
+
+document.getElementById('btnRAdjPrev').addEventListener('click',function(){
+  // Preview in temporary canvas shown as alert-like overlay
+  var t=document.createElement('canvas');t.width=W;t.height=H;var tc=t.getContext('2d');
+  tc.drawImage(cv,0,0);
+  applyAdjust(t,tc,W,H);
+  // Replace canvas temporarily
+  cx.clearRect(0,0,W,H);cx.drawImage(t,0,0);
+  var self=this;
+  self.textContent='👁 預覽中...';
+  setTimeout(function(){
+    // Restore from history
+    if(undoStack.length>0){
+      var img=new Image();
+      img.onload=function(){cx.clearRect(0,0,W,H);cx.drawImage(img,0,0);};
+      img.src=undoStack[undoStack.length-1];
+    }
+    self.textContent='👁 預覽';
+  },2000);
+});
+
+/* Resize */
+function updResize(){
+  document.getElementById('rResize').value=100;document.getElementById('vResize').textContent='100%';
+  document.getElementById('resW').value=W;document.getElementById('resH').value=H;
+}
+document.getElementById('rResize').addEventListener('input',function(){
+  var p=parseInt(this.value);document.getElementById('vResize').textContent=p+'%';
+  document.getElementById('resW').value=Math.round(W*p/100);document.getElementById('resH').value=Math.round(H*p/100);
+});
+document.getElementById('resW').addEventListener('input',function(){
+  var n=parseInt(this.value)||W,r=n/W;document.getElementById('resH').value=Math.round(H*r);
+  var p=Math.round(r*100);document.getElementById('rResize').value=Math.min(100,Math.max(10,p));document.getElementById('vResize').textContent=p+'%';
+});
+document.getElementById('resH').addEventListener('input',function(){
+  var n=parseInt(this.value)||H,r=n/H;document.getElementById('resW').value=Math.round(W*r);
+  var p=Math.round(r*100);document.getElementById('rResize').value=Math.min(100,Math.max(10,p));document.getElementById('vResize').textContent=p+'%';
 });
 document.getElementById('btnResize').addEventListener('click',function(){
-  var nw=parseInt(document.getElementById('resizeW').value);
-  var nh=parseInt(document.getElementById('resizeH').value);
+  var nw=parseInt(document.getElementById('resW').value),nh=parseInt(document.getElementById('resH').value);
   if(!nw||!nh){alert('請輸入有效尺寸');return;}
+  pushHist();
   var t=document.createElement('canvas');t.width=nw;t.height=nh;
   t.getContext('2d').drawImage(cv,0,0,W,H,0,0,nw,nh);
-  W=nw;H=nh;cv.width=W;cv.height=H;cx.drawImage(t,0,0);
-  updInfo();updResize();
+  W=nw;H=nh;cv.width=W;cv.height=H;cx.drawImage(t,0,0);updInfo();updResize();
 });
 
-// Rotate/Flip
-document.getElementById('rotL').addEventListener('click',function(){rot(-90);});
-document.getElementById('rotR').addEventListener('click',function(){rot(90);});
-document.getElementById('flipH').addEventListener('click',function(){flip('h');});
-document.getElementById('flipV').addEventListener('click',function(){flip('v');});
+/* Rotate/Flip */
+document.getElementById('rotL').addEventListener('click',function(){doRot(-90);});
+document.getElementById('rotR').addEventListener('click',function(){doRot(90);});
+document.getElementById('fH').addEventListener('click',function(){doFlip('h');});
+document.getElementById('fV').addEventListener('click',function(){doFlip('v');});
+function doRot(d){pushHist();var t=document.createElement('canvas'),c=t.getContext('2d');t.width=H;t.height=W;c.translate(t.width/2,t.height/2);c.rotate(d*Math.PI/180);c.drawImage(cv,-W/2,-H/2);W=t.width;H=t.height;cv.width=W;cv.height=H;cx.drawImage(t,0,0);updInfo();updResize();resetCrop();}
+function doFlip(d){pushHist();var t=document.createElement('canvas');t.width=W;t.height=H;var c=t.getContext('2d');if(d==='h'){c.translate(W,0);c.scale(-1,1);}else{c.translate(0,H);c.scale(1,-1);}c.drawImage(cv,0,0);cx.clearRect(0,0,W,H);cx.drawImage(t,0,0);updInfo();}
 
-function rot(d){
-  var t=document.createElement('canvas'),c=t.getContext('2d');
-  t.width=H;t.height=W;c.translate(t.width/2,t.height/2);
-  c.rotate(d*Math.PI/180);c.drawImage(cv,-W/2,-H/2);
-  W=t.width;H=t.height;cv.width=W;cv.height=H;cx.drawImage(t,0,0);
-  updInfo();updResize();resetCrop();
-}
-function flip(d){
-  var t=document.createElement('canvas');t.width=W;t.height=H;var c=t.getContext('2d');
-  if(d==='h'){c.translate(W,0);c.scale(-1,1);}else{c.translate(0,H);c.scale(1,-1);}
-  c.drawImage(cv,0,0);cx.clearRect(0,0,W,H);cx.drawImage(t,0,0);
+/* Watermark */
+document.getElementById('wmPos').addEventListener('click',function(e){
+  var b=e.target.closest('.wm-opt');if(!b)return;
+  var os=this.querySelectorAll('.wm-opt');for(var i=0;i<os.length;i++)os[i].classList.remove('active');
+  b.classList.add('active');
+});
+document.getElementById('rWmSize').addEventListener('input',function(){document.getElementById('vWmSize').textContent=this.value+'px';});
+document.getElementById('rWmAlpha').addEventListener('input',function(){document.getElementById('vWmAlpha').textContent=this.value+'%';});
+
+document.getElementById('btnWm').addEventListener('click',function(){
+  var txt=document.getElementById('wmText').value.trim();
+  if(!txt){alert('請輸入浮水印文字');return;}
+  pushHist();
+  addWatermark(cx,W,H,txt);
   updInfo();
+});
+
+function addWatermark(context,w,h,txt){
+  var size=parseInt(document.getElementById('rWmSize').value);
+  var alpha=parseInt(document.getElementById('rWmAlpha').value)/100;
+  var color=document.getElementById('wmColor').value;
+  var posEl=document.querySelector('#wmPos .wm-opt.active');
+  var pos=posEl?posEl.getAttribute('data-p'):'br';
+  context.save();
+  context.font='bold '+size+'px -apple-system, sans-serif';
+  context.fillStyle=color;
+  context.globalAlpha=alpha;
+  var m=context.measureText(txt);
+  var tw=m.width,th=size;
+  var pad=size*0.5;
+  var x,y;
+  switch(pos){
+    case'tl':x=pad;y=pad+th;break;
+    case'tr':x=w-tw-pad;y=pad+th;break;
+    case'bl':x=pad;y=h-pad;break;
+    case'ct':x=(w-tw)/2;y=(h+th)/2;break;
+    default:x=w-tw-pad;y=h-pad;
+  }
+  // Shadow for readability
+  context.shadowColor='rgba(0,0,0,0.5)';
+  context.shadowBlur=4;
+  context.shadowOffsetX=1;
+  context.shadowOffsetY=1;
+  context.fillText(txt,x,y);
+  context.restore();
 }
 
-// Format
-document.getElementById('formatGrid').addEventListener('click',function(e){
-  var o=e.target.closest('.format-opt');if(!o)return;
+/* Format */
+document.getElementById('fmtGrid').addEventListener('click',function(e){
+  var o=e.target.closest('.fo');if(!o)return;
   fmt=o.getAttribute('data-f');
-  var os=this.querySelectorAll('.format-opt');
-  for(var i=0;i<os.length;i++)os[i].classList.remove('active');
+  var os=this.querySelectorAll('.fo');for(var i=0;i<os.length;i++)os[i].classList.remove('active');
   o.classList.add('active');
-  document.getElementById('qualityRow').style.display=fmt==='png'?'none':'flex';
+  document.getElementById('qRow').style.display=fmt==='png'?'none':'flex';
 });
-document.getElementById('qualityRange').addEventListener('input',function(){
-  qual=parseInt(this.value)/100;
-  document.getElementById('qualityVal').textContent=parseInt(this.value)+'%';
+document.getElementById('rQual').addEventListener('input',function(){
+  qual=parseInt(this.value)/100;document.getElementById('vQual').textContent=parseInt(this.value)+'%';
 });
 
-// Download
+/* Download */
 document.getElementById('btnDL').addEventListener('click',function(){
   if(!W)return;
   var ext=fmt==='jpeg'?'jpg':fmt;
   var url=fmt==='png'?cv.toDataURL('image/png'):cv.toDataURL('image/'+fmt,qual);
   var b=atob(url.split(',')[1]),sz=b.length;
   var ss=sz<1048576?(sz/1024).toFixed(1)+' KB':(sz/1048576).toFixed(1)+' MB';
-  var ri=document.getElementById('resultInfo');ri.style.display='block';
+  var ri=document.getElementById('resInfo');ri.classList.remove('hidden');
   ri.textContent='✅ '+W+'×'+H+' px — '+ext.toUpperCase()+' — '+ss;
-  var a=document.createElement('a');a.href=url;a.download='image_'+W+'x'+H+'.'+ext;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  var customName=document.getElementById('dlName').value.trim();
+  var fileName=customName?customName+'.'+ext:'image_'+W+'x'+H+'.'+ext;
+  dlData(url,fileName);
 });
 
-// Reset
+function dlData(url,name){var a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);}
+
+/* Undo */
+document.getElementById('btnUndo').addEventListener('click',function(){
+  if(undoStack.length<2){alert('沒有可復原的步驟');return;}
+  undoStack.pop(); // remove current
+  var prev=undoStack[undoStack.length-1];
+  var img=new Image();
+  img.onload=function(){W=img.width;H=img.height;cv.width=W;cv.height=H;cx.drawImage(img,0,0);updInfo();updResize();resetCrop();};
+  img.src=prev;
+});
+
+/* Reset */
 document.getElementById('btnReset').addEventListener('click',function(){
-  W=0;H=0;cv.width=0;cv.height=0;
+  undoStack=[];W=0;H=0;cv.width=0;cv.height=0;
   document.getElementById('uploadArea').style.display='block';
-  ['canvasWrap','cropSection','resizeSection','rotateSection','formatSection','resetSection','imgInfo'].forEach(function(id){
-    document.getElementById(id).classList.remove('active');
-  });
+  ['canvasWrap','sCrop','sAdj','sResize','sRot','sWm','sFmt','sReset','imgInfo'].forEach(function(id){document.getElementById(id).classList.remove('active');});
   ov.classList.remove('active');
-  document.getElementById('resultInfo').style.display='none';
-  document.getElementById('fileInput').value='';
-  resetCrop();
+  document.getElementById('resInfo').classList.add('hidden');
+  document.getElementById('fileInput').value='';resetCrop();resetAdj();
 });
 
-function updInfo(){
-  document.getElementById('imgInfo').innerHTML='📄 目前尺寸：<span>'+W+' × '+H+'</span> px';
-}
+function updInfo(){document.getElementById('imgInfo').innerHTML='📄 目前尺寸：<span>'+W+' × '+H+'</span> px';}
+
+/* ===== MODE SWITCHING ===== */
+document.getElementById('modeEdit').addEventListener('click',function(){
+  this.classList.add('active');document.getElementById('modeBatch').classList.remove('active');
+  document.getElementById('editPanel').classList.remove('hidden');document.getElementById('batchPanel').classList.add('hidden');
+});
+document.getElementById('modeBatch').addEventListener('click',function(){
+  this.classList.add('active');document.getElementById('modeEdit').classList.remove('active');
+  document.getElementById('batchPanel').classList.remove('hidden');document.getElementById('editPanel').classList.add('hidden');
+});
+
+/* ===== BATCH MODE ===== */
+var bFiles=[];
+var bFmt='jpeg';
+
+document.getElementById('bFileInput').addEventListener('change',function(e){
+  bFiles=Array.from(e.target.files);
+  if(!bFiles.length)return;
+  var html='';
+  bFiles.forEach(function(f,i){
+    var sz=f.size<1048576?(f.size/1024).toFixed(1)+' KB':(f.size/1048576).toFixed(1)+' MB';
+    html+='<div class="batch-item"><span class="name">'+(i+1)+'. '+f.name+'</span><span class="size">'+sz+'</span></div>';
+  });
+  document.getElementById('bList').innerHTML=html;
+  document.getElementById('bSettings').classList.remove('hidden');
+  document.getElementById('bResetSec').classList.remove('hidden');
+  document.getElementById('bUploadArea').style.display='none';
+});
+
+document.getElementById('bResize').addEventListener('input',function(){
+  document.getElementById('bResizeVal').textContent=this.value+'%';
+});
+document.getElementById('bQual').addEventListener('input',function(){
+  document.getElementById('bQualVal').textContent=this.value+'%';
+});
+document.getElementById('bFmtGrid').addEventListener('click',function(e){
+  var o=e.target.closest('.fo');if(!o)return;
+  bFmt=o.getAttribute('data-bf');
+  var os=this.querySelectorAll('.fo');for(var i=0;i<os.length;i++)os[i].classList.remove('active');
+  o.classList.add('active');
+  document.getElementById('bQRow').style.display=(bFmt==='png'||bFmt==='original')?'none':'flex';
+});
+
+document.getElementById('btnBatch').addEventListener('click',function(){
+  if(!bFiles.length)return;
+  var pct=parseInt(document.getElementById('bResize').value);
+  var bq=parseInt(document.getElementById('bQual').value)/100;
+  var wmTxt=document.getElementById('bWmText').value.trim();
+  var prog=document.getElementById('bProgress');
+  var fill=document.getElementById('bProgressFill');
+  var status=document.getElementById('bStatus');
+  prog.classList.remove('hidden');status.classList.remove('hidden');
+
+  var idx=0;
+  function processNext(){
+    if(idx>=bFiles.length){
+      status.textContent='✅ 全部完成！共處理 '+bFiles.length+' 張圖片';
+      return;
+    }
+    var f=bFiles[idx];
+    status.textContent='處理中... ('+(idx+1)+'/'+bFiles.length+') '+f.name;
+    fill.style.width=((idx+1)/bFiles.length*100)+'%';
+
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      var img=new Image();
+      img.onload=function(){
+        var nw=Math.round(img.width*pct/100);
+        var nh=Math.round(img.height*pct/100);
+        var t=document.createElement('canvas');t.width=nw;t.height=nh;
+        var tc=t.getContext('2d');
+        tc.drawImage(img,0,0,img.width,img.height,0,0,nw,nh);
+
+        // Watermark
+        if(wmTxt){
+          var wmSize=Math.max(16,Math.round(nw*0.04));
+          tc.save();
+          tc.font='bold '+wmSize+'px -apple-system, sans-serif';
+          tc.fillStyle='rgba(255,255,255,0.5)';
+          tc.shadowColor='rgba(0,0,0,0.5)';tc.shadowBlur=3;
+          var m=tc.measureText(wmTxt);
+          tc.fillText(wmTxt,nw-m.width-wmSize*0.5,nh-wmSize*0.5);
+          tc.restore();
+        }
+
+        // Determine format
+        var useFmt=bFmt;
+        if(useFmt==='original'){
+          if(f.type.indexOf('png')>-1)useFmt='png';
+          else if(f.type.indexOf('webp')>-1)useFmt='webp';
+          else useFmt='jpeg';
+        }
+        var ext=useFmt==='jpeg'?'jpg':useFmt;
+        var url=useFmt==='png'?t.toDataURL('image/png'):t.toDataURL('image/'+useFmt,bq);
+        var baseName=f.name.replace(/\.[^.]+$/,'');
+        dlData(url,baseName+'_'+nw+'x'+nh+'.'+ext);
+
+        idx++;
+        setTimeout(processNext,500); // Small delay for browser to handle downloads
+      };img.src=ev.target.result;
+    };reader.readAsDataURL(f);
+  }
+  processNext();
+});
+
+document.getElementById('btnBReset').addEventListener('click',function(){
+  bFiles=[];
+  document.getElementById('bList').innerHTML='';
+  document.getElementById('bSettings').classList.add('hidden');
+  document.getElementById('bResetSec').classList.add('hidden');
+  document.getElementById('bUploadArea').style.display='block';
+  document.getElementById('bProgress').classList.add('hidden');
+  document.getElementById('bStatus').classList.add('hidden');
+  document.getElementById('bFileInput').value='';
+});
 </script>
 </body>
 </html>
