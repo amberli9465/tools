@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>壓縮 / 解壓縮工具</title>
+<style>
+  :root {
+    --bg:#f5f0ea;--card:#fff;--text:#2c2416;--sub:#7a6f60;
+    --accent:#c45d3e;--accent-light:#fdf0ec;--green:#4a8c6f;
+    --green-light:#edf7f1;--border:#e8e2d9;--yellow:#c49a3e;
+    --yellow-light:#fdf6e8;--blue:#3e7ec4;--blue-light:#ecf3fd;
+    --radius:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,'Helvetica Neue','PingFang TC','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .header{background:linear-gradient(135deg,#2c2416,#4a3828);color:#faf8f5;padding:24px 16px 20px;text-align:center}
+  .header h1{font-size:22px;font-weight:700}
+  .header p{font-size:12px;opacity:.6;margin-top:4px}
+  .container{max-width:860px;margin:0 auto;padding:16px 16px 60px}
+  .mode-tabs{display:flex;gap:8px;margin-bottom:16px}
+  .mode-tab{flex:1;padding:14px;border-radius:var(--radius);border:2px solid var(--border);background:var(--card);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;text-align:center;color:var(--sub)}
+  .mode-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .panel{display:none}
+  .panel.active{display:block}
+  .upload-area{background:var(--card);border:2px dashed var(--border);border-radius:var(--radius);padding:36px 20px;text-align:center;position:relative;cursor:pointer;margin-bottom:14px;transition:all .2s}
+  .upload-area:hover{border-color:var(--accent);background:var(--accent-light)}
+  .upload-area .icon{font-size:40px;margin-bottom:8px}
+  .upload-area h2{font-size:16px;font-weight:600;margin-bottom:4px}
+  .upload-area p{font-size:12px;color:var(--sub)}
+  .upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .upload-row{display:flex;gap:8px;margin-bottom:14px}
+  .upload-row .upload-area{flex:1;padding:20px 12px;margin-bottom:0}
+  .upload-row .upload-area .icon{font-size:28px;margin-bottom:4px}
+  .upload-row .upload-area h2{font-size:13px}
+  .upload-row .upload-area p{font-size:10px}
+  .file-list{background:var(--card);border-radius:var(--radius);padding:12px;margin-bottom:14px;box-shadow:0 2px 8px rgba(44,36,22,.05);max-height:400px;overflow-y:auto}
+  .file-list-empty{text-align:center;padding:20px;color:var(--sub);font-size:13px}
+  .file-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:12px}
+  .file-item:hover{background:var(--bg)}
+  .file-item .icon{font-size:18px;flex-shrink:0}
+  .file-item .info{flex:1;min-width:0}
+  .file-item .name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+  .file-item .meta{font-size:10px;color:var(--sub);margin-top:1px}
+  .file-item .remove{cursor:pointer;color:var(--sub);font-size:16px;padding:4px 8px;border-radius:4px}
+  .file-item .remove:hover{background:var(--accent);color:#fff}
+  .file-item.dir{background:var(--yellow-light)}
+  .sec{background:var(--card);border-radius:var(--radius);margin-bottom:12px;box-shadow:0 2px 8px rgba(44,36,22,.05);overflow:hidden}
+  .sec-t{padding:14px 16px;font-size:14px;font-weight:600;border-bottom:1px solid var(--border)}
+  .sec-b{padding:14px 16px}
+  .fmt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .fmt-opt{padding:14px 8px;border-radius:10px;border:2px solid var(--border);background:var(--card);text-align:center;cursor:pointer}
+  .fmt-opt:hover{border-color:var(--accent)}
+  .fmt-opt.active{border-color:var(--accent);background:var(--accent-light)}
+  .fmt-opt .fi{font-size:24px;margin-bottom:4px}
+  .fmt-opt .fn{font-size:13px;font-weight:600}
+  .fmt-opt .fd{font-size:10px;color:var(--sub);margin-top:2px}
+  .rr{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .rr label{font-size:12px;color:var(--sub);width:70px;flex-shrink:0}
+  .rr input[type=range]{flex:1;accent-color:var(--accent)}
+  .rr .val{font-size:13px;font-weight:600;width:60px;text-align:right;flex-shrink:0}
+  .name-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .name-row label{font-size:12px;color:var(--sub);width:70px;flex-shrink:0}
+  .name-input{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg)}
+  .name-input:focus{outline:none;border-color:var(--accent)}
+  .name-suffix{font-size:13px;color:var(--sub);flex-shrink:0}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:8px;border:none;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;width:100%}
+  .btn-g{background:var(--green);color:#fff}
+  .btn-p{background:var(--accent);color:#fff}
+  .btn-o{background:var(--card);color:var(--text);border:1.5px solid var(--border)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .progress{background:var(--bg);border-radius:8px;padding:12px;margin-bottom:12px;display:none}
+  .progress.active{display:block}
+  .progress-label{font-size:12px;color:var(--sub);margin-bottom:6px}
+  .progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--accent);border-radius:3px;width:0;transition:width .3s}
+  .result{background:var(--green-light);border:1px solid #b8dcc9;border-radius:8px;padding:12px 16px;margin-bottom:12px;display:none}
+  .result.active{display:block}
+  .result-title{font-size:13px;font-weight:600;color:var(--green);margin-bottom:4px}
+  .result-stats{font-size:12px;color:#4a8c6f;line-height:1.6}
+  .notice{background:var(--blue-light);border:1px solid #b8d0ef;border-radius:8px;padding:10px 14px;font-size:12px;color:#2d5f94;line-height:1.6;margin-bottom:12px}
+  .notice strong{color:#1e4370}
+  .stat-bar{display:flex;gap:12px;margin-bottom:12px;font-size:12px;color:var(--sub);flex-wrap:wrap}
+  .stat-bar span{background:var(--bg);padding:6px 12px;border-radius:20px}
+  .stat-bar span strong{color:var(--text)}
+  @media (max-width:600px){
+    .fmt-grid{grid-template-columns:repeat(2,1fr)}
+    .upload-row{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📦 壓縮 / 解壓縮工具</h1>
+  <p>ZIP · TAR · GZIP — 全部在瀏覽器離線完成</p>
+</div>
+<div class="container">
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="mCompress">📦 壓縮打包</button>
+    <button class="mode-tab" id="mExtract">📂 解壓縮</button>
+  </div>
+
+  <div class="panel active" id="pCompress">
+    <div class="notice"><strong>💡 提示：</strong>可以一次選多個檔案或選整個資料夾，程式會保留資料夾結構。</div>
+    <div class="upload-row">
+      <div class="upload-area">
+        <div class="icon">📄</div>
+        <h2>選擇檔案</h2>
+        <p>可選多個檔案</p>
+        <input type="file" id="inputFiles" multiple>
+      </div>
+      <div class="upload-area">
+        <div class="icon">📁</div>
+        <h2>選擇資料夾</h2>
+        <p>保留完整結構</p>
+        <input type="file" id="inputFolder" webkitdirectory directory multiple>
+      </div>
+    </div>
+    <div class="stat-bar" id="statBar" style="display:none">
+      <span>📊 共 <strong id="sCount">0</strong> 個檔案</span>
+      <span>💾 總大小 <strong id="sSize">0 B</strong></span>
+    </div>
+    <div class="file-list" id="fileList">
+      <div class="file-list-empty">尚未選擇檔案</div>
+    </div>
+    <div class="sec">
+      <div class="sec-t">⚙️ 壓縮設定</div>
+      <div class="sec-b">
+        <div class="fmt-grid">
+          <div class="fmt-opt active" data-f="zip"><div class="fi">📦</div><div class="fn">ZIP</div><div class="fd">最通用</div></div>
+          <div class="fmt-opt" data-f="targz"><div class="fi">🗃️</div><div class="fn">TAR.GZ</div><div class="fd">Linux常用</div></div>
+          <div class="fmt-opt" data-f="tar"><div class="fi">📚</div><div class="fn">TAR</div><div class="fd">純打包</div></div>
+        </div>
+        <div class="rr" id="rowLevel">
+          <label>壓縮程度</label>
+          <input type="range" id="lvlRange" min="1" max="9" value="6">
+          <span class="val" id="lvlVal">標準</span>
+        </div>
+        <div class="name-row">
+          <label>檔案名稱</label>
+          <input class="name-input" id="outName" placeholder="archive" value="archive">
+          <span class="name-suffix" id="outSuffix">.zip</span>
+        </div>
+        <div class="progress" id="prgC">
+          <div class="progress-label" id="prgLblC">準備中...</div>
+          <div class="progress-bar"><div class="progress-fill" id="prgFillC"></div></div>
+        </div>
+        <div class="result" id="resC">
+          <div class="result-title">✅ 壓縮完成</div>
+          <div class="result-stats" id="resStatsC"></div>
+        </div>
+        <button class="btn btn-g" id="btnCompress" disabled>📦 開始壓縮並下載</button>
+      </div>
+    </div>
+    <button class="btn btn-o" id="btnClearC" style="margin-top:8px">🗑️ 清空清單</button>
+  </div>
+
+  <div class="panel" id="pExtract">
+    <div class="notice"><strong>💡 提示：</strong>支援 ZIP、TAR、TAR.GZ、TGZ、GZ 格式。</div>
+    <div class="upload-area">
+      <div class="icon">📂</div>
+      <h2>選擇壓縮檔</h2>
+      <p>支援 .zip / .tar / .tar.gz / .tgz / .gz</p>
+      <input type="file" id="inputArchive" accept=".zip,.tar,.gz,.tgz">
+    </div>
+    <div class="stat-bar" id="statBarE" style="display:none">
+      <span>📄 <strong id="sNameE">-</strong></span>
+      <span>📊 <strong id="sCountE">0</strong> 個項目</span>
+      <span>💾 <strong id="sSizeE">0 B</strong></span>
+    </div>
+    <div class="file-list" id="extractList" style="display:none"></div>
+    <div class="progress" id="prgE">
+      <div class="progress-label" id="prgLblE">解析中...</div>
+      <div class="progress-bar"><div class="progress-fill" id="prgFillE"></div></div>
+    </div>
+    <div class="result" id="resE">
+      <div class="result-title">✅ 解壓縮完成</div>
+      <div class="result-stats" id="resStatsE"></div>
+    </div>
+    <div id="extractActions" style="display:none">
+      <button class="btn btn-g" id="btnDLAll">⬇️ 下載全部（打包成 ZIP）</button>
+      <button class="btn btn-o" id="btnClearE" style="margin-top:8px">🗑️ 清除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var CRC_TABLE=(function(){var t=new Uint32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c;}return t;})();
+function crc32(d){var c=0xFFFFFFFF;for(var i=0;i<d.length;i++)c=CRC_TABLE[(c^d[i])&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+
+async function deflateRaw(data){
+  if(typeof CompressionStream==='undefined') return data;
+  var cs=new CompressionStream('deflate-raw');
+  var w=cs.writable.getWriter();w.write(data);w.close();
+  var r=cs.readable.getReader();var chunks=[];var total=0;
+  while(true){var x=await r.read();if(x.done)break;chunks.push(x.value);total+=x.value.length;}
+  var out=new Uint8Array(total),off=0;
+  for(var i=0;i<chunks.length;i++){out.set(chunks[i],off);off+=chunks[i].length;}
+  return out;
+}
+async function gzipCompress(data){
+  var cs=new CompressionStream('gzip');
+  var w=cs.writable.getWriter();w.write(data);w.close();
+  var r=cs.readable.getReader();var chunks=[];var total=0;
+  while(true){var x=await r.read();if(x.done)break;chunks.push(x.value);total+=x.value.length;}
+  var out=new Uint8Array(total),off=0;
+  for(var i=0;i<chunks.length;i++){out.set(chunks[i],off);off+=chunks[i].length;}
+  return out;
+}
+async function inflateRaw(data){
+  var ds=new DecompressionStream('deflate-raw');
+  var w=ds.writable.getWriter();w.write(data);w.close();
+  var r=ds.readable.getReader();var chunks=[];var total=0;
+  while(true){var x=await r.read();if(x.done)break;chunks.push(x.value);total+=x.value.length;}
+  var out=new Uint8Array(total),off=0;
+  for(var i=0;i<chunks.length;i++){out.set(chunks[i],off);off+=chunks[i].length;}
+  return out;
+}
+async function gunzip(data){
+  var ds=new DecompressionStream('gzip');
+  var w=ds.writable.getWriter();w.write(data);w.close();
+  var r=ds.readable.getReader();var chunks=[];var total=0;
+  while(true){var x=await r.read();if(x.done)break;chunks.push(x.value);total+=x.value.length;}
+  var out=new Uint8Array(total),off=0;
+  for(var i=0;i<chunks.length;i++){out.set(chunks[i],off);off+=chunks[i].length;}
+  return out;
+}
+
+function strToBytes(s){return new TextEncoder().encode(s);}
+function bytesToStr(b){return new TextDecoder('utf-8').decode(b);}
+
+async function createZip(entries,level,onProgress){
+  var localParts=[],centralParts=[],offset=0;
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i];
+    if(onProgress)onProgress(i,entries.length,e.name);
+    var nameBytes=strToBytes(e.name);
+    var isDir=e.name.endsWith('/');
+    var data=e.data||new Uint8Array(0);
+    var crc=isDir?0:crc32(data);
+    var uncompSize=data.length;
+    var compData,method;
+    if(isDir||level===0||data.length<20){compData=data;method=0;}
+    else{
+      try{
+        compData=await deflateRaw(data);
+        method=8;
+        if(compData.length>=data.length){compData=data;method=0;}
+      }catch(er){compData=data;method=0;}
+    }
+    var compSize=compData.length;
+    var lh=new Uint8Array(30+nameBytes.length);
+    var dv=new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true);
+    dv.setUint16(4,20,true);
+    dv.setUint16(6,0x0800,true);
+    dv.setUint16(8,method,true);
+    dv.setUint16(10,0,true);dv.setUint16(12,0,true);
+    dv.setUint32(14,crc,true);
+    dv.setUint32(18,compSize,true);
+    dv.setUint32(22,uncompSize,true);
+    dv.setUint16(26,nameBytes.length,true);
+    dv.setUint16(28,0,true);
+    lh.set(nameBytes,30);
+    localParts.push(lh);
+    localParts.push(compData);
+    var ch=new Uint8Array(46+nameBytes.length);
+    var cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true);
+    cv.setUint16(4,20,true);cv.setUint16(6,20,true);
+    cv.setUint16(8,0x0800,true);cv.setUint16(10,method,true);
+    cv.setUint16(12,0,true);cv.setUint16(14,0,true);
+    cv.setUint32(16,crc,true);
+    cv.setUint32(20,compSize,true);cv.setUint32(24,uncompSize,true);
+    cv.setUint16(28,nameBytes.length,true);
+    cv.setUint16(30,0,true);cv.setUint16(32,0,true);
+    cv.setUint16(34,0,true);cv.setUint16(36,0,true);
+    cv.setUint32(38,isDir?0x10:0,true);
+    cv.setUint32(42,offset,true);
+    ch.set(nameBytes,46);
+    centralParts.push(ch);
+    offset+=lh.length+compData.length;
+  }
+  var centralSize=0;
+  for(var j=0;j<centralParts.length;j++)centralSize+=centralParts[j].length;
+  var end=new Uint8Array(22);
+  var edv=new DataView(end.buffer);
+  edv.setUint32(0,0x06054b50,true);
+  edv.setUint16(4,0,true);edv.setUint16(6,0,true);
+  edv.setUint16(8,entries.length,true);
+  edv.setUint16(10,entries.length,true);
+  edv.setUint32(12,centralSize,true);
+  edv.setUint32(16,offset,true);
+  edv.setUint16(20,0,true);
+  var total=offset+centralSize+22;
+  var result=new Uint8Array(total);
+  var pos=0;
+  for(var k=0;k<localParts.length;k++){result.set(localParts[k],pos);pos+=localParts[k].length;}
+  for(var m=0;m<centralParts.length;m++){result.set(centralParts[m],pos);pos+=centralParts[m].length;}
+  result.set(end,pos);
+  return result;
+}
+
+async function readZip(buffer){
+  var data=new Uint8Array(buffer);
+  var dv=new DataView(buffer);
+  var entries=[];
+  var eocd=-1;
+  for(var i=data.length-22;i>=Math.max(0,data.length-65558);i--){
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  }
+  if(eocd<0)throw new Error('不是有效的 ZIP 檔案');
+  var total=dv.getUint16(eocd+10,true);
+  var cdOff=dv.getUint32(eocd+16,true);
+  var p=cdOff;
+  for(var n=0;n<total;n++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    var method=dv.getUint16(p+10,true);
+    var compSize=dv.getUint32(p+20,true);
+    var uncompSize=dv.getUint32(p+24,true);
+    var nameLen=dv.getUint16(p+28,true);
+    var extraLen=dv.getUint16(p+30,true);
+    var commentLen=dv.getUint16(p+32,true);
+    var localOff=dv.getUint32(p+42,true);
+    var name=bytesToStr(data.subarray(p+46,p+46+nameLen));
+    entries.push({name:name,compSize:compSize,uncompSize:uncompSize,method:method,localOff:localOff,data:null});
+    p+=46+nameLen+extraLen+commentLen;
+  }
+  for(var k=0;k<entries.length;k++){
+    var e=entries[k];
+    if(e.name.endsWith('/')){e.data=new Uint8Array(0);continue;}
+    var lh=e.localOff;
+    var lNameLen=dv.getUint16(lh+26,true);
+    var lExtraLen=dv.getUint16(lh+28,true);
+    var dStart=lh+30+lNameLen+lExtraLen;
+    var comp=data.subarray(dStart,dStart+e.compSize);
+    if(e.method===0){e.data=comp;}
+    else if(e.method===8){
+      try{e.data=await inflateRaw(comp);}
+      catch(er){throw new Error('解壓縮失敗：'+e.name);}
+    }else{throw new Error('不支援的壓縮方式：'+e.name);}
+  }
+  return entries;
+}
+
+function createTar(entries){
+  var totalSize=0;
+  for(var i=0;i<entries.length;i++){
+    totalSize+=512;
+    if(entries[i].data)totalSize+=Math.ceil(entries[i].data.length/512)*512;
+  }
+  totalSize+=1024;
+  var result=new Uint8Array(totalSize);
+  var pos=0;
+  for(var n=0;n<entries.length;n++){
+    var e=entries[n];
+    var isDir=e.name.endsWith('/');
+    var nameBytes=strToBytes(e.name);
+    var size=isDir?0:(e.data?e.data.length:0);
+    for(var j=0;j<Math.min(100,nameBytes.length);j++)result[pos+j]=nameBytes[j];
+    var mode=isDir?'0000755':'0000644';
+    for(var j=0;j<7;j++)result[pos+100+j]=mode.charCodeAt(j);
+    for(var j=0;j<7;j++){result[pos+108+j]=0x30;result[pos+116+j]=0x30;}
+    var sizeStr=size.toString(8).padStart(11,'0');
+    for(var j=0;j<11;j++)result[pos+124+j]=sizeStr.charCodeAt(j);
+    var mtime=Math.floor(Date.now()/1000).toString(8).padStart(11,'0');
+    for(var j=0;j<11;j++)result[pos+136+j]=mtime.charCodeAt(j);
+    for(var j=0;j<8;j++)result[pos+148+j]=0x20;
+    result[pos+156]=isDir?0x35:0x30;
+    var magic='ustar  ';
+    for(var j=0;j<7;j++)result[pos+257+j]=magic.charCodeAt(j);
+    var chk=0;
+    for(var j=0;j<512;j++)chk+=result[pos+j];
+    var chkStr=chk.toString(8).padStart(6,'0');
+    for(var j=0;j<6;j++)result[pos+148+j]=chkStr.charCodeAt(j);
+    result[pos+154]=0;result[pos+155]=0x20;
+    pos+=512;
+    if(!isDir&&e.data){
+      result.set(e.data,pos);
+      pos+=Math.ceil(e.data.length/512)*512;
+    }
+  }
+  return result;
+}
+
+function readTar(buffer){
+  var data=new Uint8Array(buffer);
+  var entries=[];
+  var pos=0;
+  while(pos<data.length-512){
+    var empty=true;
+    for(var i=0;i<512;i++){if(data[pos+i]!==0){empty=false;break;}}
+    if(empty)break;
+    var nameEnd=0;
+    for(var i=0;i<100;i++){if(data[pos+i]===0){nameEnd=i;break;}nameEnd=i+1;}
+    var name=bytesToStr(data.subarray(pos,pos+nameEnd));
+    var sizeStr='';
+    for(var i=0;i<11;i++){
+      var c=data[pos+124+i];
+      if(c===0||c===0x20)break;
+      sizeStr+=String.fromCharCode(c);
+    }
+    var size=parseInt(sizeStr,8)||0;
+    var typeFlag=data[pos+156];
+    var isDir=typeFlag===0x35||name.endsWith('/');
+    pos+=512;
+    var fileData=null;
+    if(!isDir&&size>0){
+      fileData=data.subarray(pos,pos+size);
+      pos+=Math.ceil(size/512)*512;
+    }
+    if(name)entries.push({name:name,data:fileData||new Uint8Array(0),uncompSize:size});
+  }
+  return entries;
+}
+
+function formatSize(b){
+  if(b<1024)return b+' B';
+  if(b<1048576)return (b/1024).toFixed(1)+' KB';
+  if(b<1073741824)return (b/1048576).toFixed(1)+' MB';
+  return (b/1073741824).toFixed(2)+' GB';
+}
+function dlBlob(blob,name){
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function getIcon(name){
+  if(name.endsWith('/'))return '📁';
+  var ext=(name.split('.').pop()||'').toLowerCase();
+  if(['jpg','jpeg','png','gif','webp','bmp','svg'].indexOf(ext)>-1)return '🖼️';
+  if(['mp4','mov','avi','mkv','webm'].indexOf(ext)>-1)return '🎬';
+  if(['mp3','wav','ogg','flac'].indexOf(ext)>-1)return '🎵';
+  if(['doc','docx'].indexOf(ext)>-1)return '📝';
+  if(['xls','xlsx','csv'].indexOf(ext)>-1)return '📊';
+  if(['pdf'].indexOf(ext)>-1)return '📕';
+  if(['zip','tar','gz','tgz','rar','7z'].indexOf(ext)>-1)return '📦';
+  if(['txt','md'].indexOf(ext)>-1)return '📄';
+  if(['html','css','js','json','xml'].indexOf(ext)>-1)return '💻';
+  return '📄';
+}
+
+document.getElementById('mCompress').addEventListener('click',function(){
+  this.classList.add('active');
+  document.getElementById('mExtract').classList.remove('active');
+  document.getElementById('pCompress').classList.add('active');
+  document.getElementById('pExtract').classList.remove('active');
+});
+document.getElementById('mExtract').addEventListener('click',function(){
+  this.classList.add('active');
+  document.getElementById('mCompress').classList.remove('active');
+  document.getElementById('pExtract').classList.add('active');
+  document.getElementById('pCompress').classList.remove('active');
+});
+
+var compressFiles=[];
+var outFormat='zip';
+
+document.getElementById('inputFiles').addEventListener('change',function(e){
+  addFiles(Array.from(e.target.files),false);this.value='';
+});
+document.getElementById('inputFolder').addEventListener('change',function(e){
+  addFiles(Array.from(e.target.files),true);this.value='';
+});
+
+function addFiles(files,isFolder){
+  files.forEach(function(f){
+    var name=isFolder?(f.webkitRelativePath||f.name):f.name;
+    if(compressFiles.some(function(x){return x.name===name;}))return;
+    compressFiles.push({name:name,size:f.size,file:f});
+  });
+  renderFileList();
+}
+
+function renderFileList(){
+  var el=document.getElementById('fileList');
+  if(compressFiles.length===0){
+    el.innerHTML='<div class="file-list-empty">尚未選擇檔案</div>';
+    document.getElementById('statBar').style.display='none';
+    document.getElementById('btnCompress').disabled=true;
+    return;
+  }
+  compressFiles.sort(function(a,b){return a.name.localeCompare(b.name);});
+  var html='';var totalSize=0;
+  compressFiles.forEach(function(f,i){
+    totalSize+=f.size;
+    html+='<div class="file-item">';
+    html+='<div class="icon">'+getIcon(f.name)+'</div>';
+    html+='<div class="info">';
+    html+='<div class="name">'+esc(f.name)+'</div>';
+    html+='<div class="meta">'+formatSize(f.size)+'</div>';
+    html+='</div>';
+    html+='<div class="remove" data-i="'+i+'">✕</div>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+  document.getElementById('sCount').textContent=compressFiles.length;
+  document.getElementById('sSize').textContent=formatSize(totalSize);
+  document.getElementById('statBar').style.display='flex';
+  document.getElementById('btnCompress').disabled=false;
+  el.querySelectorAll('.remove').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var idx=parseInt(this.getAttribute('data-i'));
+      compressFiles.splice(idx,1);
+      renderFileList();
+    });
+  });
+}
+
+document.querySelectorAll('#pCompress .fmt-opt').forEach(function(opt){
+  opt.addEventListener('click',function(){
+    document.querySelectorAll('#pCompress .fmt-opt').forEach(function(o){o.classList.remove('active');});
+    this.classList.add('active');
+    outFormat=this.getAttribute('data-f');
+    var suffix='.zip';
+    if(outFormat==='tar')suffix='.tar';
+    if(outFormat==='targz')suffix='.tar.gz';
+    document.getElementById('outSuffix').textContent=suffix;
+    document.getElementById('rowLevel').style.display=outFormat==='tar'?'none':'flex';
+  });
+});
+
+document.getElementById('lvlRange').addEventListener('input',function(){
+  var v=parseInt(this.value);
+  var label;
+  if(v<=2)label='最快';
+  else if(v<=4)label='快速';
+  else if(v<=6)label='標準';
+  else if(v<=8)label='較小';
+  else label='最小';
+  document.getElementById('lvlVal').textContent=label;
+});
+
+document.getElementById('btnCompress').addEventListener('click',async function(){
+  if(compressFiles.length===0)return;
+  this.disabled=true;
+  var outName=document.getElementById('outName').value.trim()||'archive';
+  var level=parseInt(document.getElementById('lvlRange').value);
+  var prg=document.getElementById('prgC');
+  var prgLbl=document.getElementById('prgLblC');
+  var prgFill=document.getElementById('prgFillC');
+  var res=document.getElementById('resC');
+  prg.classList.add('active');
+  res.classList.remove('active');
+  try{
+    prgLbl.textContent='讀取檔案中...';
+    prgFill.style.width='0%';
+    var entries=[];var totalOrig=0;
+    for(var i=0;i<compressFiles.length;i++){
+      var f=compressFiles[i];
+      prgLbl.textContent='讀取 ('+(i+1)+'/'+compressFiles.length+'): '+f.name;
+      prgFill.style.width=((i+1)/compressFiles.length*30)+'%';
+      var buf=await f.file.arrayBuffer();
+      entries.push({name:f.name,data:new Uint8Array(buf)});
+      totalOrig+=f.size;
+      await new Promise(function(r){setTimeout(r,0);});
+    }
+    var result,suffix;
+    if(outFormat==='zip'){
+      prgLbl.textContent='壓縮中...';
+      result=await createZip(entries,level,function(idx,total,name){
+        prgLbl.textContent='壓縮 ('+(idx+1)+'/'+total+'): '+name;
+        prgFill.style.width=(30+(idx+1)/total*65)+'%';
+      });
+      suffix='.zip';
+    }else if(outFormat==='tar'){
+      prgLbl.textContent='打包中...';
+      prgFill.style.width='70%';
+      result=createTar(entries);
+      suffix='.tar';
+    }else if(outFormat==='targz'){
+      prgLbl.textContent='打包中...';
+      prgFill.style.width='50%';
+      var tar=createTar(entries);
+      prgLbl.textContent='Gzip 壓縮中...';
+      prgFill.style.width='75%';
+      result=await gzipCompress(tar);
+      suffix='.tar.gz';
+    }
+    prgLbl.textContent='完成！';
+    prgFill.style.width='100%';
+    dlBlob(new Blob([result],{type:'application/octet-stream'}),outName+suffix);
+    var ratio=totalOrig>0?((1-result.length/totalOrig)*100).toFixed(1):0;
+    document.getElementById('resStatsC').innerHTML=
+      '原始大小：<strong>'+formatSize(totalOrig)+'</strong><br>'+
+      '壓縮後：<strong>'+formatSize(result.length)+'</strong><br>'+
+      '壓縮率：<strong>'+ratio+'%</strong>（'+compressFiles.length+' 個檔案）';
+    res.classList.add('active');
+    setTimeout(function(){prg.classList.remove('active');},800);
+  }catch(err){
+    prgLbl.textContent='❌ 錯誤：'+err.message;
+    console.error(err);
+  }
+  this.disabled=false;
+});
+
+document.getElementById('btnClearC').addEventListener('click',function(){
+  compressFiles=[];
+  renderFileList();
+  document.getElementById('resC').classList.remove('active');
+  document.getElementById('prgC').classList.remove('active');
+});
+
+var extractedEntries=[];
+
+document.getElementById('inputArchive').addEventListener('change',async function(e){
+  var f=e.target.files[0];
+  if(!f)return;
+  await handleArchive(f);
+  this.value='';
+});
+
+async function handleArchive(f){
+  var prg=document.getElementById('prgE');
+  var prgLbl=document.getElementById('prgLblE');
+  var prgFill=document.getElementById('prgFillE');
+  var res=document.getElementById('resE');
+  var list=document.getElementById('extractList');
+  var actions=document.getElementById('extractActions');
+  prg.classList.add('active');
+  res.classList.remove('active');
+  list.style.display='none';
+  actions.style.display='none';
+  prgLbl.textContent='讀取檔案中...';
+  prgFill.style.width='20%';
+  try{
+    var buffer=await f.arrayBuffer();
+    var name=f.name.toLowerCase();
+    var entries;
+    prgLbl.textContent='解析中...';
+    prgFill.style.width='50%';
+    await new Promise(function(r){setTimeout(r,100);});
+    if(name.endsWith('.zip')){
+      entries=await readZip(buffer);
+    }else if(name.endsWith('.tar')){
+      entries=readTar(buffer);
+    }else if(name.endsWith('.tar.gz')||name.endsWith('.tgz')){
+      prgLbl.textContent='解 Gzip 中...';
+      var tar=await gunzip(new Uint8Array(buffer));
+      prgLbl.textContent='解析 TAR 中...';
+      entries=readTar(tar.buffer);
+    }else if(name.endsWith('.gz')){
+      var dec=await gunzip(new Uint8Array(buffer));
+      var origName=f.name.replace(/\.gz$/i,'');
+      entries=[{name:origName,data:dec,uncompSize:dec.length}];
+    }else{
+      throw new Error('不支援的格式');
+    }
+    extractedEntries=entries;
+    prgFill.style.width='100%';
+    prgLbl.textContent='完成！';
+    var totalSize=0;var html='';
+    entries.forEach(function(e,i){
+      var size=e.uncompSize||(e.data?e.data.length:0);
+      totalSize+=size;
+      var isDir=e.name.endsWith('/');
+      html+='<div class="file-item'+(isDir?' dir':'')+'">';
+      html+='<div class="icon">'+getIcon(e.name)+'</div>';
+      html+='<div class="info">';
+      html+='<div class="name">'+esc(e.name)+'</div>';
+      html+='<div class="meta">'+(isDir?'資料夾':formatSize(size))+'</div>';
+      html+='</div>';
+      if(!isDir)html+='<div class="remove" data-i="'+i+'" title="下載此檔案">⬇</div>';
+      html+='</div>';
+    });
+    list.innerHTML=html;
+    list.style.display='block';
+    document.getElementById('sNameE').textContent=f.name;
+    document.getElementById('sCountE').textContent=entries.length;
+    document.getElementById('sSizeE').textContent=formatSize(totalSize);
+    document.getElementById('statBarE').style.display='flex';
+    document.getElementById('resStatsE').innerHTML=
+      '壓縮檔：<strong>'+esc(f.name)+'</strong><br>'+
+      '包含 <strong>'+entries.length+'</strong> 個項目，總大小 <strong>'+formatSize(totalSize)+'</strong>';
+    res.classList.add('active');
+    actions.style.display='block';
+    list.querySelectorAll('.remove').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var idx=parseInt(this.getAttribute('data-i'));
+        var e=extractedEntries[idx];
+        if(e.data&&!e.name.endsWith('/')){
+          var justName=e.name.split('/').pop();
+          dlBlob(new Blob([e.data]),justName);
+        }
+      });
+    });
+    setTimeout(function(){prg.classList.remove('active');},500);
+  }catch(err){
+    prgLbl.textContent='❌ '+err.message;
+    console.error(err);
+    setTimeout(function(){prg.classList.remove('active');},3000);
+  }
+}
+
+document.getElementById('btnDLAll').addEventListener('click',async function(){
+  if(extractedEntries.length===0)return;
+  this.disabled=true;
+  var prg=document.getElementById('prgE');
+  var prgLbl=document.getElementById('prgLblE');
+  var prgFill=document.getElementById('prgFillE');
+  prg.classList.add('active');
+  prgLbl.textContent='重新打包為 ZIP...';
+  prgFill.style.width='30%';
+  try{
+    var zip=await createZip(extractedEntries,6,function(i,total,name){
+      prgLbl.textContent='打包 ('+(i+1)+'/'+total+'): '+name;
+      prgFill.style.width=(30+(i+1)/total*65)+'%';
+    });
+    prgFill.style.width='100%';
+    prgLbl.textContent='完成！';
+    dlBlob(new Blob([zip]),'extracted.zip');
+    setTimeout(function(){prg.classList.remove('active');},800);
+  }catch(err){
+    prgLbl.textContent='❌ '+err.message;
+  }
+  this.disabled=false;
+});
+
+document.getElementById('btnClearE').addEventListener('click',function(){
+  extractedEntries=[];
+  document.getElementById('extractList').style.display='none';
+  document.getElementById('extractList').innerHTML='';
+  document.getElementById('statBarE').style.display='none';
+  document.getElementById('resE').classList.remove('active');
+  document.getElementById('extractActions').style.display='none';
+});
+</script>
+</body>
+</html>
